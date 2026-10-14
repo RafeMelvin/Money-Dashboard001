@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Tracker</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <div>
+      <h1>BUDGET <span class="accent">TRACKER</span></h1>
+      <div class="sub">INCOME &middot; EXPENSES &middot; DEBTS &middot; INVESTING &middot; PLANNING</div>
+    </div>
+    <button id="gearBtn" class="ghost" title="API key settings">&#9881;</button>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="planning">Planning</button>
+    <button class="tab" data-tab="income">Income</button>
+    <button class="tab" data-tab="expenses">Expenses</button>
+    <button class="tab" data-tab="debts">Debts</button>
+    <button class="tab" data-tab="assets">Assets</button>
+  </div>
+
+  <div class="view active" id="view-overview"></div>
+  <div class="view" id="view-planning"></div>
+  <div class="view" id="view-income"></div>
+  <div class="view" id="view-expenses"></div>
+  <div class="view" id="view-debts"></div>
+  <div class="view" id="view-assets"></div>
+
+  <div class="note">Everything you enter is stored only in this browser on this device — nothing is uploaded anywhere. Live stock prices use your own Finnhub API key, which is stored only in this browser and sent only to api.finnhub.io. Everything else works fully offline.</div>
+  <footer>Budget Tracker &middot; self-contained edition</footer>
+</div>
+
+<!-- First-run API key setup -->
+<div id="setupOverlay" class="overlay" hidden>
+  <div class="modal">
+    <h2>Enable live stock prices</h2>
+    <p class="note" style="margin-top:0">Add a free Finnhub API key to get live prices for your holdings. Get one at <b>finnhub.io</b> (free tier, no card needed). Your key is stored only in this browser and is sent only to api.finnhub.io.</p>
+    <input class="txt" id="setupKeyInput" type="text" placeholder="Finnhub API key" style="width:100%;margin-top:10px" autocomplete="off" spellcheck="false">
+    <div class="form-row"><button id="setupSave">Save key</button><button id="setupSkip" class="ghost">Skip &mdash; enter prices manually</button></div>
+  </div>
+</div>
+
+<!-- Settings: change / clear the key -->
+<div id="settingsModal" class="overlay" hidden>
+  <div class="modal">
+    <h2>Settings</h2>
+    <div class="kv"><span class="k">Finnhub API key</span><span class="v" id="setCurrent">&mdash;</span></div>
+    <input class="txt" id="setKeyInput" type="text" placeholder="New key (leave blank to keep current)" style="width:100%;margin-top:10px" autocomplete="off" spellcheck="false">
+    <div class="form-row"><button id="setSave">Save</button><button id="setClear" class="ghost del">Clear key</button><button id="setClose" class="ghost">Close</button></div>
+    <div class="note">The key is stored only in this browser's localStorage and is sent only to api.finnhub.io.</div>
+  </div>
+</div>
+
+<script src="js/csv.js"></script>
+<script src="js/quotes.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
