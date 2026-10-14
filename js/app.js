@@ -627,8 +627,11 @@ function bindQuoteControls(il){
     if(!window.BTQuotes||!BTQuotes.hasKey()){openSettings();return;}
     var syms=(a.holdings||[]).filter(function(h){return h.useLive!==false;}).map(function(h){return h.ticker;});
     var res=document.querySelector('[data-refreshres="'+id+'"]');
-    if(res)res.innerHTML='<div class="note">Refreshing prices\u2026</div>';
+    if(quoteBusy){if(res)res.innerHTML='<div class="note">A refresh is already in progress…</div>';return;}
+    quoteBusy=true;
+    if(res)res.innerHTML='<div class="note">Refreshing prices…</div>';
     BTQuotes.refresh(syms,function(r){
+      quoteBusy=false;
       save();render();
       var res2=document.querySelector('[data-refreshres="'+id+'"]');
       if(res2)res2.innerHTML='<div class="note">Prices updated: <b>'+r.ok+'</b> ok'+(r.fail?" · <b>"+r.fail+"</b> failed":"")+'.</div>';
@@ -679,22 +682,55 @@ function bootKeys(){
   var ss=$("setSave");if(ss)ss.addEventListener("click",function(){
     var v=$("setKeyInput");var k=v?v.value.trim():"";
     if(k){BTQuotes.setKey(k);try{localStorage.removeItem("bta_setup_dismissed");}catch(e){}}
-    closeSettings();render();});
-  var sc=$("setClear");if(sc)sc.addEventListener("click",function(){BTQuotes.clearKey();openSettings();render();});
+    closeSettings();render();syncQuotePolling();if(k)doQuoteRefresh();});
+  var sc=$("setClear");if(sc)sc.addEventListener("click",function(){BTQuotes.clearKey();stopQuotePolling();openSettings();render();});
   var sx=$("setClose");if(sx)sx.addEventListener("click",closeSettings);
   [so,$("settingsModal")].forEach(function(o){if(o)o.addEventListener("click",function(e){if(e.target===o)o.hidden=true;});});
 }
-function bootRefresh(force){
-  if(!(window.BTQuotes&&BTQuotes.hasKey()))return;
+/* ===== AUTOREFRESH-BEGIN ===== */
+/* ---------- quote auto-refresh scheduling (behavior only; no visual changes) ---------- */
+var quoteTimer=null,quoteBusy=false;
+function liveSymbols(){
   var syms=[];
   state.invAccts.forEach(function(a){(a.holdings||[]).forEach(function(h){if(h.useLive!==false&&h.ticker)syms.push(h.ticker);});});
-  if(!syms.length)return;
-  var doIt=function(){BTQuotes.refresh(syms,function(){save();render();});};
-  if(force){doIt();return;}
-  var stale=false;
-  syms.forEach(function(s){var q=BTQuotes.getCached(s);if(!q||!q.ts||(Date.now()-q.ts)>15*60*1000)stale=true;});
-  if(stale)doIt();
+  return syms;
 }
+/* One guarded refresh: on completion, holdings, account totals, assets, net worth re-render. */
+function doQuoteRefresh(){
+  if(quoteBusy)return;
+  if(!(window.BTQuotes&&BTQuotes.hasKey()))return;
+  var syms=liveSymbols();
+  if(!syms.length)return;
+  quoteBusy=true;
+  BTQuotes.refresh(syms,function(){quoteBusy=false;save();render();});
+}
+function startQuotePolling(){
+  stopQuotePolling();
+  if(!(window.BTQuotes&&BTQuotes.hasKey()))return;
+  quoteTimer=setInterval(function(){
+    if(document.hidden||quoteBusy)return;
+    doQuoteRefresh();
+  },60000);
+}
+function stopQuotePolling(){if(quoteTimer){clearInterval(quoteTimer);quoteTimer=null;}}
+function syncQuotePolling(){
+  if(window.BTQuotes&&BTQuotes.hasKey())startQuotePolling();else stopQuotePolling();
+}
+function bootRefresh(force){
+  if(!(window.BTQuotes&&BTQuotes.hasKey()))return;
+  if(force){doQuoteRefresh();startQuotePolling();return;}
+  var syms=liveSymbols(),stale=false;
+  syms.forEach(function(s){var q=BTQuotes.getCached(s);if(!q||!q.ts||(Date.now()-q.ts)>15*60*1000)stale=true;});
+  if(stale)doQuoteRefresh();
+  startQuotePolling();
+}
+/* ===== AUTOREFRESH-END ===== */
+/* Refresh when the page returns to the foreground or regains window focus. */
+document.addEventListener("visibilitychange",function(){
+  if(document.hidden){stopQuotePolling();}
+  else{doQuoteRefresh();startQuotePolling();}
+});
+window.addEventListener("focus",function(){doQuoteRefresh();});
 render();
 bootKeys();
 if(setupNeeded()){var so2=$("setupOverlay");if(so2)so2.hidden=false;}
